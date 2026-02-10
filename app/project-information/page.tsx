@@ -155,7 +155,7 @@ export default function ProjectInformationPage() {
                 </button>
               </div>
               <p className="mt-1 text-xs text-slate-500">
-                SI = metric, IP = imperial (sonra dönüşümleri ekleyeceğiz).
+                SI = metric, IP = imperial.
               </p>
             </div>
 

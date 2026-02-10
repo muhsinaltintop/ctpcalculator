@@ -9,6 +9,7 @@ import {
   FILL_SECTION_DEFAULTS,
 } from "@/lib/projectStorage";
 import { useState } from "react";
+import { UnitNumberField } from "@/components/UnitNumberField";
 
 export default function FillSectionPage() {
   const project = loadProject();
@@ -33,6 +34,9 @@ export default function FillSectionPage() {
     );
   }
 
+  const unitSystem = project.projectInformation.units;
+
+  // 🔒 HER ZAMAN SI
   const [form, setForm] = useState<FillSection>(
     project.fillSection ?? FILL_SECTION_DEFAULTS,
   );
@@ -45,14 +49,13 @@ export default function FillSectionPage() {
   }
 
   function onContinue() {
-  saveProject({
-    ...project,
-    fillSection: form,
-  });
+    saveProject({
+      ...project,
+      fillSection: form, // SI
+    });
 
-  window.location.href = "/fan-plenum";
-}
-
+    window.location.href = "/fan-plenum";
+  }
 
   return (
     <main className="mx-auto max-w-3xl p-6">
@@ -103,19 +106,23 @@ export default function FillSectionPage() {
             }
           />
 
-          <NumberField
-            label="Fill Height (m)"
-            value={form.fillHeight}
-            onChange={(v) => update("fillHeight", v)}
+          {/* Unit-aware */}
+          <UnitNumberField
+            label="Fill Height"
+            quantity="length"
+            siValue={form.fillHeight}
+            unitSystem={unitSystem}
+            onChangeSI={(v) => update("fillHeight", v)}
           />
 
-          <NumberField
+          {/* Unitless */}
+          <SimpleNumberField
             label="Effective Surface Factor"
             value={form.surfaceFactor}
             onChange={(v) => update("surfaceFactor", v)}
           />
 
-          <NumberField
+          <SimpleNumberField
             label="Merkel Constant (kₐ)"
             value={form.merkelKa}
             onChange={(v) => update("merkelKa", v)}
@@ -137,7 +144,7 @@ export default function FillSectionPage() {
 
 /* ---------- Small components ---------- */
 
-function NumberField({
+function SimpleNumberField({
   label,
   value,
   onChange,

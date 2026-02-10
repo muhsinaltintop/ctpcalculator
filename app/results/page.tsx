@@ -2,6 +2,12 @@
 
 import { loadProject, resetProject } from "@/lib/projectStorage";
 import { useMemo } from "react";
+import {
+  C_to_F,
+  m3s_to_cfm,
+  Pa_to_inH2O,
+  m_to_ft,
+} from "@/lib/units";
 
 export default function ResultsPage() {
   const project = loadProject();
@@ -34,9 +40,11 @@ export default function ResultsPage() {
     projectInformation,
   } = project;
 
-  /* ---------- Calculations ---------- */
+  const unitSystem = projectInformation.units;
 
-  const approach =
+  /* ---------- Calculations (SI) ---------- */
+
+  const approachSI =
     thermalConditions.coldWater - thermalConditions.wetBulb;
 
   const fanPowerKW = useMemo(() => {
@@ -48,12 +56,30 @@ export default function ResultsPage() {
     );
   }, [fanPlenum]);
 
-  /* ---------- Flags ---------- */
+  /* ---------- Unit-aware display values ---------- */
+
+  const displayTemp = (v: number) =>
+    unitSystem === "SI" ? v : C_to_F(v);
+
+  const displayApproach = (v: number) =>
+    unitSystem === "SI" ? v : C_to_F(v);
+
+  const displayAirFlow = (v: number) =>
+    unitSystem === "SI" ? v : m3s_to_cfm(v);
+
+  const displayPressure = (v: number) =>
+    unitSystem === "SI" ? v : Pa_to_inH2O(v);
+
+  const tempUnit = unitSystem === "SI" ? "°C" : "°F";
+  const airUnit = unitSystem === "SI" ? "m³/s" : "cfm";
+  const pressureUnit = unitSystem === "SI" ? "Pa" : "inH₂O";
+
+  /* ---------- Flags (SI logic) ---------- */
 
   const approachStatus =
-    approach < 3
+    approachSI < 3
       ? "critical"
-      : approach < 5
+      : approachSI < 5
       ? "warning"
       : "ok";
 
@@ -76,6 +102,9 @@ export default function ResultsPage() {
           <p className="text-sm text-slate-600">
             Project: {projectInformation.projectName}
           </p>
+          <p className="text-xs text-slate-500">
+            Display units: {unitSystem}
+          </p>
         </div>
 
         <button
@@ -93,9 +122,18 @@ export default function ResultsPage() {
       <section className="grid gap-6 md:grid-cols-2">
         {/* Thermal */}
         <Card title="Thermal Performance">
-          <Row label="Cold Water (°C)" value={thermalConditions.coldWater} />
-          <Row label="Wet Bulb (°C)" value={thermalConditions.wetBulb} />
-          <Row label="Approach (°C)" value={approach.toFixed(2)} />
+          <Row
+            label={`Cold Water (${tempUnit})`}
+            value={displayTemp(thermalConditions.coldWater).toFixed(2)}
+          />
+          <Row
+            label={`Wet Bulb (${tempUnit})`}
+            value={displayTemp(thermalConditions.wetBulb).toFixed(2)}
+          />
+          <Row
+            label={`Approach (${tempUnit})`}
+            value={displayApproach(approachSI).toFixed(2)}
+          />
 
           <StatusBadge status={approachStatus}>
             {approachStatus === "ok"
@@ -109,16 +147,16 @@ export default function ResultsPage() {
         {/* Fan */}
         <Card title="Fan Performance">
           <Row
-            label="Air Flow Rate (m³/s)"
-            value={fanPlenum.airFlowRate}
+            label={`Air Flow Rate (${airUnit})`}
+            value={displayAirFlow(fanPlenum.airFlowRate).toFixed(2)}
           />
           <Row
-            label="Static Pressure (Pa)"
-            value={fanPlenum.staticPressure}
+            label={`Static Pressure (${pressureUnit})`}
+            value={displayPressure(fanPlenum.staticPressure).toFixed(2)}
           />
           <Row
             label="Fan Efficiency (%)"
-            value={fanPlenum.fanEfficiency}
+            value={fanPlenum.fanEfficiency.toFixed(1)}
           />
           <Row
             label="Estimated Fan Power (kW)"
@@ -194,7 +232,9 @@ function StatusBadge({
       : "bg-red-100 text-red-700";
 
   return (
-    <div className={`mt-3 inline-block rounded-xl px-3 py-1 text-sm ${color}`}>
+    <div
+      className={`mt-3 inline-block rounded-xl px-3 py-1 text-sm ${color}`}
+    >
       {children}
     </div>
   );

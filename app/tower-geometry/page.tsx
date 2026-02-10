@@ -9,6 +9,7 @@ import {
   TowerGeometry,
 } from "@/lib/projectStorage";
 import { useState } from "react";
+import { UnitNumberField } from "@/components/UnitNumberField";
 
 export default function TowerGeometryPage() {
   const project = loadProject();
@@ -29,6 +30,9 @@ export default function TowerGeometryPage() {
     );
   }
 
+  const unitSystem = project.projectInformation.units;
+
+  // 🔒 HER ZAMAN SI
   const [form, setForm] = useState<TowerGeometry>(
     project.towerGeometry ?? TOWER_GEOMETRY_DEFAULTS,
   );
@@ -41,14 +45,13 @@ export default function TowerGeometryPage() {
   }
 
   function onContinue() {
-  saveProject({
-    ...project,
-    towerGeometry: form,
-  });
+    saveProject({
+      ...project,
+      towerGeometry: form, // SI
+    });
 
-  window.location.href = "/fill-section";
-}
-
+    window.location.href = "/fill-section";
+  }
 
   return (
     <main className="mx-auto max-w-3xl p-6">
@@ -87,7 +90,8 @@ export default function TowerGeometryPage() {
       {/* Form */}
       <section className="rounded-2xl border bg-white p-6 shadow-sm">
         <div className="grid gap-4 sm:grid-cols-2">
-          <NumberField
+          {/* Unitless */}
+          <SimpleNumberField
             label="Number of Cells"
             value={form.numberOfCells}
             onChange={(v) => update("numberOfCells", v)}
@@ -101,7 +105,10 @@ export default function TowerGeometryPage() {
               { value: "BackToBack", label: "Back-to-Back" },
             ]}
             onChange={(v) =>
-              update("cellArrangement", v as TowerGeometry["cellArrangement"])
+              update(
+                "cellArrangement",
+                v as TowerGeometry["cellArrangement"],
+              )
             }
           />
 
@@ -113,7 +120,10 @@ export default function TowerGeometryPage() {
               { value: "OneEndOpen", label: "One End Open" },
             ]}
             onChange={(v) =>
-              update("airInletConfig", v as TowerGeometry["airInletConfig"])
+              update(
+                "airInletConfig",
+                v as TowerGeometry["airInletConfig"],
+              )
             }
           />
 
@@ -126,22 +136,25 @@ export default function TowerGeometryPage() {
             }
           />
 
-          <NumberField
+          <SimpleNumberField
             label="Louver Coefficient"
             value={form.louverCoefficient}
             onChange={(v) => update("louverCoefficient", v)}
           />
 
-          <NumberField
+          <SimpleNumberField
             label="Inlet Obstruction (%)"
             value={form.inletObstruction}
             onChange={(v) => update("inletObstruction", v)}
           />
 
-          <NumberField
-            label="Inlet Height (m)"
-            value={form.inletHeight}
-            onChange={(v) => update("inletHeight", v)}
+          {/* Unit-aware */}
+          <UnitNumberField
+            label="Inlet Height"
+            quantity="length"
+            siValue={form.inletHeight}
+            unitSystem={unitSystem}
+            onChangeSI={(v) => update("inletHeight", v)}
           />
         </div>
 
@@ -160,7 +173,7 @@ export default function TowerGeometryPage() {
 
 /* ---------- Small components ---------- */
 
-function NumberField({
+function SimpleNumberField({
   label,
   value,
   onChange,

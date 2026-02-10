@@ -9,6 +9,7 @@ import {
   FAN_PLENUM_DEFAULTS,
 } from "@/lib/projectStorage";
 import { useState } from "react";
+import { UnitNumberField } from "@/components/UnitNumberField";
 
 export default function FanPlenumPage() {
   const project = loadProject();
@@ -34,6 +35,9 @@ export default function FanPlenumPage() {
     );
   }
 
+  const unitSystem = project.projectInformation.units;
+
+  // 🔒 HER ZAMAN SI
   const [form, setForm] = useState<FanPlenum>(
     project.fanPlenum ?? FAN_PLENUM_DEFAULTS,
   );
@@ -48,7 +52,7 @@ export default function FanPlenumPage() {
   function onContinue() {
     saveProject({
       ...project,
-      fanPlenum: form,
+      fanPlenum: form, // SI olarak kaydedilir
     });
 
     window.location.href = "/results";
@@ -91,6 +95,7 @@ export default function FanPlenumPage() {
       {/* Form */}
       <section className="rounded-2xl border bg-white p-6 shadow-sm">
         <div className="grid gap-4 sm:grid-cols-2">
+          {/* Fan Type */}
           <SelectField
             label="Fan Type"
             value={form.fanType}
@@ -103,28 +108,36 @@ export default function FanPlenumPage() {
             }
           />
 
-          <NumberField
-            label="Air Flow Rate (m³/s)"
-            value={form.airFlowRate}
-            onChange={(v) => update("airFlowRate", v)}
+          {/* Air Flow */}
+          <UnitNumberField
+            label="Air Flow Rate"
+            quantity="airFlow"
+            siValue={form.airFlowRate}
+            unitSystem={unitSystem}
+            onChangeSI={(v) => update("airFlowRate", v)}
           />
 
-          <NumberField
+          {/* Fan Efficiency – unitless */}
+          <SimpleNumberField
             label="Fan Efficiency (%)"
             value={form.fanEfficiency}
             onChange={(v) => update("fanEfficiency", v)}
           />
 
-          <NumberField
+          {/* Plenum loss – unitless */}
+          <SimpleNumberField
             label="Plenum Loss Coefficient"
             value={form.plenumLossCoeff}
             onChange={(v) => update("plenumLossCoeff", v)}
           />
 
-          <NumberField
-            label="Fan Static Pressure (Pa)"
-            value={form.staticPressure}
-            onChange={(v) => update("staticPressure", v)}
+          {/* Static Pressure */}
+          <UnitNumberField
+            label="Fan Static Pressure"
+            quantity="pressure"
+            siValue={form.staticPressure}
+            unitSystem={unitSystem}
+            onChangeSI={(v) => update("staticPressure", v)}
           />
         </div>
 
@@ -143,7 +156,7 @@ export default function FanPlenumPage() {
 
 /* ---------- Small components ---------- */
 
-function NumberField({
+function SimpleNumberField({
   label,
   value,
   onChange,
