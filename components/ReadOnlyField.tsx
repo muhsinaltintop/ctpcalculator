@@ -7,7 +7,7 @@ export function ReadOnlyField({
   unitSystem,
 }: {
   label: string;
-  value: number;
+  value?: number;
   unitSystem: "SI" | "IP";
 }) {
   // undefined gelirse render etme

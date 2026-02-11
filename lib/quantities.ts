@@ -9,7 +9,9 @@ export type Quantity =
   | "waterFlow"
   | "airFlow"
   | "length"
-  | "pressure";
+  | "pressure"
+  | "power";
+  
 
 /* ------------------ */
 /* Quantity Meta Map  */
@@ -40,6 +42,11 @@ export const QuantityMeta = {
     siUnit: "Pa",
     ipUnit: "inH₂O",
   },
+
+  power: {
+    siUnit: "kW",
+    ipUnit: "HP",
+  }
 } as const satisfies Record<
   Quantity,
   {

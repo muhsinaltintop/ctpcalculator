@@ -1,5 +1,6 @@
 
 import { UnitNumberField } from "./UnitNumberField";
+import type { ThermalConditions } from "@/lib/projectStorage";
 
 export function AltitudePressureToggle({
   form,
@@ -8,10 +9,11 @@ export function AltitudePressureToggle({
   errors,
 }: {
   form: ThermalConditions;
-  update: <K extends keyof ThermalConditions>(
-    key: K,
-    value: ThermalConditions[K]
-  ) => void;
+  update: (
+  key: keyof ThermalConditions,
+  value: ThermalConditions[keyof ThermalConditions]
+) => void;
+
   unitSystem: "SI" | "IP";
   errors: Record<string, string>;
 }) {
