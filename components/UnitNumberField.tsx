@@ -9,22 +9,26 @@ export function UnitNumberField({
   siValue,
   unitSystem,
   onChangeSI,
+  error,
 }: {
   label: string;
   quantity: Quantity;
   siValue: number;
   unitSystem: "SI" | "IP";
   onChangeSI: (v: number) => void;
+  error?: string;
 }) {
-  const displayValue =
-    unitSystem === "SI"
-      ? siValue
-      : toIP[quantity](siValue);
+  const displayValue = unitSystem === "SI" ? siValue : toIP[quantity](siValue);
+
+  const meta = QuantityMeta[quantity];
+
+  console.log("quantity:", quantity);
+  console.log("meta:", meta);
 
   const unitLabel =
     unitSystem === "SI"
-      ? QuantityMeta[quantity].siUnit
-      : QuantityMeta[quantity].ipUnit;
+      ? QuantityMeta[quantity]?.siUnit
+      : QuantityMeta[quantity]?.ipUnit;
 
   return (
     <div>
@@ -38,13 +42,11 @@ export function UnitNumberField({
           const v = Number(e.target.value);
           if (!Number.isFinite(v)) return;
 
-          onChangeSI(
-            unitSystem === "SI"
-              ? v
-              : toSI[quantity](v),
-          );
+          onChangeSI(unitSystem === "SI" ? v : toSI[quantity](v));
         }}
-        className="w-full rounded-xl border border-slate-300 px-3 py-2"
+        className={`w-full rounded-xl border px-3 py-2 ${
+          error ? "border-red-500" : "border-slate-300"
+        }`}
       />
     </div>
   );

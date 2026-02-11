@@ -10,6 +10,7 @@ import {
 } from "@/lib/projectStorage";
 import { useState } from "react";
 import { UnitNumberField } from "@/components/UnitNumberField";
+import Link from "next/link";
 
 export default function TowerGeometryPage() {
   const project = loadProject();
@@ -20,12 +21,12 @@ export default function TowerGeometryPage() {
         <p className="text-red-600">
           Önceki adımlar eksik. Lütfen sırayla ilerleyin.
         </p>
-        <a
+        <Link
           href="/"
           className="mt-4 inline-block rounded-xl bg-slate-900 px-4 py-2 text-white"
         >
           Go to Start
-        </a>
+        </Link>
       </main>
     );
   }
@@ -117,7 +118,10 @@ export default function TowerGeometryPage() {
             value={form.airInletConfig}
             options={[
               { value: "BothEndsOpen", label: "Both Ends Open" },
-              { value: "OneEndOpen", label: "One End Open" },
+              { value: "BothEndsClosed", label: "Both Ends Closed" },
+              { value: "LeftEndClosed", label: "Left End Closed" },
+              { value: "RightEndClosed", label: "Right End Closed" },
+              { value: "ThreeSideClosed", label: "3 Side Closed" }
             ]}
             onChange={(v) =>
               update(

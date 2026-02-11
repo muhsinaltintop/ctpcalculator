@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   loadProject,
   saveProject,
@@ -7,9 +8,16 @@ import {
   resetThermalConditions,
   THERMAL_DEFAULTS,
   ThermalConditions,
+  SolveFor,
 } from "@/lib/projectStorage";
-import { useMemo, useState } from "react";
 import { UnitNumberField } from "@/components/UnitNumberField";
+import Link from "next/link";
+import { AltitudePressureToggle } from "@/components/AltitudePressureToggle";
+import { SolveForSelector } from "@/components/SolveForSelector";
+import { SimpleNumberField } from "@/components/SimpleNumberField";
+import { ReadOnlyField } from "@/components/ReadOnlyField";
+
+/* ===================================================== */
 
 export default function ThermalConditionsPage() {
   const project = loadProject();
@@ -17,60 +25,108 @@ export default function ThermalConditionsPage() {
   if (!project.projectInformation) {
     return (
       <main className="p-6">
-        <p className="text-red-600">
-          Project Information bulunamadı. Lütfen ilk adıma dönün.
-        </p>
-        <a
+        <p className="text-red-600">Project Information bulunamadı.</p>
+        <Link
           href="/"
           className="mt-4 inline-block rounded-xl bg-slate-900 px-4 py-2 text-white"
         >
           Go to Project Information
-        </a>
+        </Link>
       </main>
     );
   }
 
   const unitSystem = project.projectInformation.units;
 
-  // 🔒 HER ZAMAN SI
   const [form, setForm] = useState<ThermalConditions>(
     project.thermalConditions ?? THERMAL_DEFAULTS,
   );
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   function update<K extends keyof ThermalConditions>(
     key: K,
-    value: number,
+    value: ThermalConditions[K],
   ) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  /* ---------- Derived (SI) ---------- */
+  /* ================= REQUIRED MATRIX ================= */
 
-  const hotWater = useMemo(
-    () => form.coldWater + form.range,
-    [form.coldWater, form.range],
-  );
+  const needPower = form.solveFor !== "power";
 
-  const approach = useMemo(
-    () => form.coldWater - form.wetBulb,
-    [form.coldWater, form.wetBulb],
-  );
+  const needColdWater = form.solveFor !== "coldWater";
+
+  const needFlow = form.solveFor !== "waterFlow";
+
+  /* ================= VALIDATION ================= */
+
+  function validate() {
+    const e: Record<string, string> = {};
+
+    if (needPower && (!form.power || form.power <= 0))
+      e.power = "Power required";
+
+    if (needColdWater && (!form.coldWater || form.coldWater <= 0))
+      e.coldWater = "Cold Water required";
+
+    if (needFlow && (!form.totalFlow || form.totalFlow <= 0))
+      e.totalFlow = "Water Flow required";
+
+    if (form.wetBulb < -40 || form.wetBulb > 93.33)
+      e.wetBulb = "Wet Bulb out of range";
+
+    if (!form.range || form.range < 0.56 || form.range > 55.56)
+      e.range = "Range must be 0.56–55.56 °C";
+
+    if (form.relativeHumidity < 0 || form.relativeHumidity > 100)
+      e.relativeHumidity = "RH must be 0–100%";
+
+    if (form.altitude === undefined && form.barometricPressure === undefined)
+      e.pressure = "Select Altitude or Pressure";
+
+    if (
+      form.altitude !== undefined &&
+      (form.altitude < -305 || form.altitude > 7620)
+    )
+      e.altitude = "Altitude out of range";
+
+    if (
+      form.barometricPressure !== undefined &&
+      (form.barometricPressure < 37.6 || form.barometricPressure > 105)
+    )
+      e.barometricPressure = "Pressure out of range";
+
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
 
   function onContinue() {
+    if (!validate()) return;
+
     saveProject({
       ...project,
-      thermalConditions: form, // SI
+      thermalConditions: form,
     });
 
     window.location.href = "/tower-geometry";
   }
 
+  /* ================= CALCULATED ================= */
+
+  const hotWater =
+    form.coldWater && form.range ? form.coldWater + form.range : undefined;
+
+  const approach =
+    form.coldWater && form.wetBulb ? form.coldWater - form.wetBulb : undefined;
+
+  /* ================= UI ================= */
+
   return (
-    <main className="mx-auto max-w-3xl p-6">
-      {/* Header + Resetler */}
-      <header className="mb-6 flex items-center justify-between">
+    <div className="mx-auto max-w-4xl p-6">
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Thermal Conditions</h1>
+          <h1 className="text-2xl font-semibold">Step 1: Thermal Conditions</h1>
           <p className="text-sm text-slate-600">
             Project: {project.projectInformation.projectName}
           </p>
@@ -82,7 +138,7 @@ export default function ThermalConditionsPage() {
               resetThermalConditions();
               setForm(THERMAL_DEFAULTS);
             }}
-            className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+            className="rounded-xl border px-3 py-2 text-sm"
           >
             Reset This Page
           </button>
@@ -97,143 +153,105 @@ export default function ThermalConditionsPage() {
             Reset Project
           </button>
         </div>
-      </header>
+      </div>
 
-      {/* Form */}
-      <section className="rounded-2xl border bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border bg-white p-6 shadow-sm space-y-6">
+        <SolveForSelector
+          value={form.solveFor}
+          onChange={(v) => update("solveFor", v)}
+        />
+
         <div className="grid gap-4 sm:grid-cols-2">
-          <UnitNumberField
-            label="Cold Water Temperature"
-            quantity="temperature"
-            siValue={form.coldWater}
-            unitSystem={unitSystem}
-            onChangeSI={(v) => update("coldWater", v)}
-          />
+          {needPower && (
+            <UnitNumberField
+              label="Power"
+              quantity="power"
+              siValue={form.power ?? 0}
+              unitSystem={unitSystem}
+              onChangeSI={(v) => update("power", v)}
+              error={errors.power}
+            />
+          )}
+
+          {needColdWater && (
+            <UnitNumberField
+              label="Cold Water"
+              quantity="temperature"
+              siValue={form.coldWater ?? 0}
+              unitSystem={unitSystem}
+              onChangeSI={(v) => update("coldWater", v)}
+              error={errors.coldWater}
+            />
+          )}
+
+          {needFlow && (
+            <UnitNumberField
+              label="Total Water Flow"
+              quantity="waterFlow"
+              siValue={form.totalFlow ?? 0}
+              unitSystem={unitSystem}
+              onChangeSI={(v) => update("totalFlow", v)}
+              error={errors.totalFlow}
+            />
+          )}
 
           <UnitNumberField
-            label="Total Water Flow"
-            quantity="waterFlow"
-            siValue={form.totalFlow}
-            unitSystem={unitSystem}
-            onChangeSI={(v) => update("totalFlow", v)}
-          />
-
-          <UnitNumberField
-            label="Wet Bulb Temperature"
+            label="Wet Bulb"
             quantity="temperature"
             siValue={form.wetBulb}
             unitSystem={unitSystem}
             onChangeSI={(v) => update("wetBulb", v)}
+            error={errors.wetBulb}
           />
 
-          {/* RH – unitless, klasik input */}
           <SimpleNumberField
             label="Relative Humidity (%)"
             value={form.relativeHumidity}
             onChange={(v) => update("relativeHumidity", v)}
+            error={errors.relativeHumidity}
           />
 
           <UnitNumberField
             label="Range"
             quantity="temperature"
-            siValue={form.range}
+            siValue={form.range ?? 0}
             unitSystem={unitSystem}
             onChangeSI={(v) => update("range", v)}
-          />
-
-          <UnitNumberField
-            label="Altitude"
-            quantity="length"
-            siValue={form.altitude}
-            unitSystem={unitSystem}
-            onChangeSI={(v) => update("altitude", v)}
+            error={errors.range}
           />
         </div>
 
-        {/* Derived */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <ReadOnlyField
-            label={`Hot Water Temperature (${
-              unitSystem === "SI" ? "°C" : "°F"
-            })`}
-            value={hotWater}
-            unitSystem={unitSystem}
-            quantity="temperature"
-          />
-          <ReadOnlyField
-            label={`Approach (${
-              unitSystem === "SI" ? "°C" : "°F"
-            })`}
-            value={approach}
-            unitSystem={unitSystem}
-            quantity="temperature"
-          />
-        </div>
+        <AltitudePressureToggle
+          form={form}
+          update={update}
+          unitSystem={unitSystem}
+          errors={errors}
+        />
 
-        <div className="mt-6 flex justify-end">
+        {form.solveFor !== "coldWater" && hotWater !== undefined && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ReadOnlyField
+              label="Hot Water"
+              value={hotWater}
+              unitSystem={unitSystem}
+            />
+            <ReadOnlyField
+              label="Approach"
+              value={approach}
+              unitSystem={unitSystem}
+            />
+          </div>
+        )}
+
+        <div className="flex justify-end">
           <button
             onClick={onContinue}
-            className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-medium text-white"
+            className="rounded-xl bg-slate-900 px-6 py-2 text-sm font-medium text-white"
           >
             Continue
           </button>
         </div>
       </section>
-    </main>
-  );
-}
-
-/* ---------- Small components ---------- */
-
-function SimpleNumberField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-sm font-medium">{label}</label>
-      <input
-        type="number"
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-slate-200"
-      />
-    </div>
-  );
-}
-
-function ReadOnlyField({
-  label,
-  value,
-  quantity,
-  unitSystem,
-}: {
-  label: string;
-  value: number;
-  quantity: "temperature" | "length";
-  unitSystem: "SI" | "IP";
-}) {
-  // reuse UnitNumberField logic without input
-  const display =
-    unitSystem === "SI"
-      ? value
-      : quantity === "temperature"
-      ? value * 9 / 5 + 32
-      : value * 3.28084;
-
-  return (
-    <div>
-      <label className="mb-1 block text-sm font-medium">{label}</label>
-      <input
-        disabled
-        value={display.toFixed(2)}
-        className="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-slate-600"
-      />
     </div>
   );
 }

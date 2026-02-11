@@ -18,23 +18,58 @@ export type ProjectState = {
 
 
 
+export type SolveFor =
+  | "towerCapability"
+  | "power"
+  | "coldWater"
+  | "waterFlow";
+
 export type ThermalConditions = {
-  coldWater: number;
-  totalFlow: number;
+  /* --- NEW (core) --- */
+  solveFor: SolveFor;
+
+  /* --- USER INPUTS --- */
+  power?: number;              // HP or kW (solveFor=power)
+  coldWater?: number;          // CWT
+  totalFlow?: number;          // Water flow
+
   wetBulb: number;
   relativeHumidity: number;
-  range: number;
-  altitude: number;
+  range?: number;
+
+  /* --- ALTITUDE / PRESSURE TOGGLE --- */
+  altitude?: number;           // m
+  barometricPressure?: number; // kPa
 };
 
+
 export const THERMAL_DEFAULTS: ThermalConditions = {
+  solveFor: "towerCapability",
+
   coldWater: 30,
   totalFlow: 250,
+
   wetBulb: 25,
   relativeHumidity: 30,
   range: 10,
+
   altitude: 850,
 };
+
+export const THERMAL_POWER_DEFAULTS: ThermalConditions = {
+  solveFor: "power",
+
+  power: 75, //kW
+  coldWater: 30,
+
+  wetBulb: 25,
+  relativeHumidity: 30,
+  range: 10,
+
+  altitude: 850,
+};
+
+
 
 export type TowerGeometry = {
   numberOfCells: number;
