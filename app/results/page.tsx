@@ -2,12 +2,8 @@
 
 import { loadProject, resetProject } from "@/lib/projectStorage";
 import { useMemo } from "react";
-import {
-  C_to_F,
-  m3s_to_cfm,
-  Pa_to_inH2O,
-  m_to_ft,
-} from "@/lib/units";
+import { C_to_F, m3s_to_cfm, Pa_to_inH2O, m_to_ft } from "@/lib/units";
+import Link from "next/link";
 
 export default function ResultsPage() {
   const project = loadProject();
@@ -24,45 +20,44 @@ export default function ResultsPage() {
         <p className="text-red-600">
           Proje eksik. Lütfen tüm adımları tamamlayın.
         </p>
-        <a
+        <Link
           href="/"
           className="mt-4 inline-block rounded-xl bg-slate-900 px-4 py-2 text-white"
         >
           Go to Start
-        </a>
+        </Link>
       </main>
     );
   }
 
-  const {
-    thermalConditions,
-    fanPlenum,
-    projectInformation,
-  } = project;
+  const { thermalConditions, fanPlenum, projectInformation } = project;
 
   const unitSystem = projectInformation.units;
+  const coldWater = thermalConditions.coldWater!;
+  const wetBulb = thermalConditions.wetBulb!;
+  const relativeHumidity = thermalConditions.relativeHumidity!;
+  const altitude = thermalConditions.altitude!;
+
+  const airFlowRate = fanPlenum.airFlowRate!;
+  const staticPressure = fanPlenum.staticPressure!;
+  const fanEfficiency = fanPlenum.fanEfficiency!;
 
   /* ---------- Calculations (SI) ---------- */
 
-  const approachSI =
-    thermalConditions.coldWater - thermalConditions.wetBulb;
+  const approachSI = coldWater - wetBulb;
 
   const fanPowerKW = useMemo(() => {
-    const eff = fanPlenum.fanEfficiency / 100;
+    const eff = fanEfficiency / 100;
     if (eff <= 0) return 0;
-    return (
-      (fanPlenum.airFlowRate * fanPlenum.staticPressure) /
-      (eff * 1000)
-    );
-  }, [fanPlenum]);
+
+    return (airFlowRate * staticPressure) / (eff * 1000);
+  }, [airFlowRate, staticPressure, fanEfficiency]);
 
   /* ---------- Unit-aware display values ---------- */
 
-  const displayTemp = (v: number) =>
-    unitSystem === "SI" ? v : C_to_F(v);
+  const displayTemp = (v: number) => (unitSystem === "SI" ? v : C_to_F(v));
 
-  const displayApproach = (v: number) =>
-    unitSystem === "SI" ? v : C_to_F(v);
+  const displayApproach = (v: number) => (unitSystem === "SI" ? v : C_to_F(v));
 
   const displayAirFlow = (v: number) =>
     unitSystem === "SI" ? v : m3s_to_cfm(v);
@@ -77,19 +72,15 @@ export default function ResultsPage() {
   /* ---------- Flags (SI logic) ---------- */
 
   const approachStatus =
-    approachSI < 3
-      ? "critical"
-      : approachSI < 5
-      ? "warning"
-      : "ok";
+    approachSI < 3 ? "critical" : approachSI < 5 ? "warning" : "ok";
 
   const flags: string[] = [];
 
-  if (thermalConditions.relativeHumidity > 70) {
+  if (relativeHumidity > 70) {
     flags.push("High relative humidity may reduce cooling efficiency.");
   }
 
-  if (thermalConditions.altitude > 1000) {
+  if (altitude > 1000) {
     flags.push("High altitude reduces air density and fan performance.");
   }
 
@@ -102,9 +93,7 @@ export default function ResultsPage() {
           <p className="text-sm text-slate-600">
             Project: {projectInformation.projectName}
           </p>
-          <p className="text-xs text-slate-500">
-            Display units: {unitSystem}
-          </p>
+          <p className="text-xs text-slate-500">Display units: {unitSystem}</p>
         </div>
 
         <button
@@ -123,12 +112,12 @@ export default function ResultsPage() {
         {/* Thermal */}
         <Card title="Thermal Performance">
           <Row
-            label={`Cold Water (${tempUnit})`}
-            value={displayTemp(thermalConditions.coldWater).toFixed(2)}
-          />
+  label={`Cold Water (${tempUnit})`}
+  value={displayTemp(coldWater).toFixed(2)}
+/>
           <Row
             label={`Wet Bulb (${tempUnit})`}
-            value={displayTemp(thermalConditions.wetBulb).toFixed(2)}
+            value={displayTemp(wetBulb).toFixed(2)}
           />
           <Row
             label={`Approach (${tempUnit})`}
@@ -139,8 +128,8 @@ export default function ResultsPage() {
             {approachStatus === "ok"
               ? "Approach acceptable"
               : approachStatus === "warning"
-              ? "Low approach – careful design"
-              : "Very low approach – high risk"}
+                ? "Low approach – careful design"
+                : "Very low approach – high risk"}
           </StatusBadge>
         </Card>
 
@@ -148,20 +137,17 @@ export default function ResultsPage() {
         <Card title="Fan Performance">
           <Row
             label={`Air Flow Rate (${airUnit})`}
-            value={displayAirFlow(fanPlenum.airFlowRate).toFixed(2)}
+            value={displayAirFlow(airFlowRate).toFixed(2)}
           />
           <Row
             label={`Static Pressure (${pressureUnit})`}
-            value={displayPressure(fanPlenum.staticPressure).toFixed(2)}
+            value={displayPressure(staticPressure).toFixed(2)}
           />
           <Row
             label="Fan Efficiency (%)"
-            value={fanPlenum.fanEfficiency.toFixed(1)}
+            value={fanEfficiency.toFixed(1)}
           />
-          <Row
-            label="Estimated Fan Power (kW)"
-            value={fanPowerKW.toFixed(2)}
-          />
+          <Row label="Estimated Fan Power (kW)" value={fanPowerKW.toFixed(2)} />
         </Card>
       </section>
 
@@ -202,13 +188,7 @@ function Card({
   );
 }
 
-function Row({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
+function Row({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="flex justify-between text-sm">
       <span className="text-slate-600">{label}</span>
@@ -228,13 +208,11 @@ function StatusBadge({
     status === "ok"
       ? "bg-green-100 text-green-700"
       : status === "warning"
-      ? "bg-amber-100 text-amber-700"
-      : "bg-red-100 text-red-700";
+        ? "bg-amber-100 text-amber-700"
+        : "bg-red-100 text-red-700";
 
   return (
-    <div
-      className={`mt-3 inline-block rounded-xl px-3 py-1 text-sm ${color}`}
-    >
+    <div className={`mt-3 inline-block rounded-xl px-3 py-1 text-sm ${color}`}>
       {children}
     </div>
   );
