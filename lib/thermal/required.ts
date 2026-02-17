@@ -1,29 +1,22 @@
-import { TowerInputModel } from "@/lib/models/input";
-import { inletAirFromWbtRhPressure } from "@/lib/psychrometrics/psychrometricEngine";
+import { TowerInputModel } from "../models/input";
+import { inletAirFromWbtRhPressure } from "../psychrometrics/psychrometricEngine";
 import { merkelRequiredKaVL_SI } from "./merkelRequired";
 
-/**
- * v1 SI assumptions:
- * - waterFlow is m3/hr
- * - convert to kg/s using rho=1000 kg/m3
- * - airflow G is kg/s dry air (solver variable)
- * - pressure derived from altitude using simple ISA approximation (kPa)
- */
-function pressureFromAltitude_kPa(alt_m: number): number {
-  // Simple barometric formula approximation (valid-ish for low altitudes)
-  // P = 101.325 * (1 - 2.25577e-5*h)^5.25588
-  const P = 101.325 * Math.pow(1 - 2.25577e-5 * alt_m, 5.25588);
-  return P;
+export function pressureFromAltitude_kPa(alt_m: number): number {
+  if (!Number.isFinite(alt_m)) throw new Error("Altitude must be finite.");
+  return 101.325 * Math.pow(1 - 2.25577e-5 * alt_m, 5.25588);
 }
 
-function waterFlow_m3hr_to_kgps(m3hr: number): number {
-  const rho = 1000; // kg/m3
+export function waterFlow_m3hr_to_kgps(m3hr: number): number {
+  if (!(m3hr > 0)) throw new Error("Water flow must be > 0.");
+  const rho = 1000;
   return (m3hr * rho) / 3600;
 }
 
 export function computeRequiredKaVL(input: TowerInputModel, G_kgps: number): number {
-  const P_kPa = pressureFromAltitude_kPa(input.thermal.altitude);
+  if (!(G_kgps > 0)) throw new Error("Airflow (G) must be > 0.");
 
+  const P_kPa = pressureFromAltitude_kPa(input.thermal.altitude);
   const inlet = inletAirFromWbtRhPressure(
     input.thermal.wetBulbTemp,
     input.thermal.relativeHumidity,

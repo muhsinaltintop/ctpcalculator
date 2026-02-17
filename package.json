@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:unit": "npx tsc --pretty false --noEmit false --outDir .tmp-test-build --module commonjs --moduleResolution node tests/run-unit-tests.ts && node .tmp-test-build/tests/run-unit-tests.js"
   },
   "dependencies": {
     "next": "16.1.6",

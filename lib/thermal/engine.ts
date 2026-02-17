@@ -1,21 +1,10 @@
-import { calculateKaVL } from "./merkelRequired";
+import { TowerInputModel } from "../models/input";
+import { computeRequiredKaVL } from "./required";
 
 /**
- * Bu fonksiyon airflow verilince KaV/L üretir.
- * Şu an basitleştirilmiş model kullanıyoruz.
- * Sonradan gerçek Merkel + psychrometrics bağlanacak.
+ * Legacy compatibility wrapper for UI experiments.
+ * For a given airflow, returns required KaV/L from the v1 SI thermal engine.
  */
-export function computeKaVLForAirflow(
-  input: any,
-  airflow: number
-) {
-  const L = input.thermal.waterFlow;
-
-  const LG = L / airflow;
-
-  // Basitleştirilmiş model:
-  // airflow artarsa KaVL artar gibi davranıyoruz
-  const simulatedKaVL = 0.8 * Math.log(airflow) * LG;
-
-  return simulatedKaVL;
+export function computeKaVLForAirflow(input: TowerInputModel, airflow_kgps: number): number {
+  return computeRequiredKaVL(input, airflow_kgps);
 }
